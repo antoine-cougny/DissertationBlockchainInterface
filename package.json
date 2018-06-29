@@ -11,5 +11,10 @@
     "url": "https://framagit.org/ant0ine/DissertationBlockchainInterface"
   },
   "author": "aoc2",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "roslib": "^0.20.0",
+    "roslibjs-client": "^0.2.1",
+    "web3": "^0.20.6"
+  }
 }
