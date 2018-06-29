@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<header>
+  <meta charset="utf-8" />
+
+  <!-- Bootstrap and jQuery -->
+  <script src="https://code.jquery.com/jquery-1.11.3.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+  
+  <!-- Few CSS rules (inc compact margins) -->
+  <style>
+    .container { width: 100% !important; }
+    #gas-price, #transaction-hash { color: grey; font-size: 12px; }
+    #errors { background-color: #ffd6c8; color: darkred; }
+    #accounts { list-style: none; }
+    .balance { color: grey; width: 70px; }
+    .from, .to, .transaction { color: blue !important; }
+    #transaction-info { background-color: darkgrey; border: grey 1px solid; margin-top: 30px; }
+    #transaction-info p { margin: -13px 2px; }
+  </style>
+</header>
+
+<body>
+<div id="app" class="container">
+  <div id="errors"></div>
+  <div class="row">
+    <div class="col-sm-12 col-md-6" id="create-new-point-to-visit">
+      <h3>Create a new point to visit</h3>
+       
+      <p id="transaction-hash">Tx Hash: </p>
+      <p> Id the task will be its token address </p>
+      <p> Not implemented: type of task, priority, number of robot, resources needed, other info <p>
+      <p id="gas-price"></p>
+      <div class="form-group row">
+        <label for="task-name" class="col-sm-3 col-form-label">Name of the task</label>
+        <div class="col-sm-9"><input class="form-control" id="task-name"></div>
+      </div>
+      <div class="form-group row">
+        <label for="position" class="col-sm-3 col-form-label"> Position (x, y, z)</label>
+        <div class=col-sm-3 ><input class="form-control" placeholder="x" id="xCoord" required type="number" name="x" step="0.1"></div>
+        <div class=col-sm-3><input class="form-control" placeholder="y" id="yCoord" required type="number" name="y" step="0.1"></div>
+        <div class=col-sm-3><input class="form-control" placeholder="z" id="zCoord" required type="number" name="z" step="0.1"></div>
+      </div>
+      <div class="form-group row">
+        <label for="orientation" class="col-sm-3 col-form-label">Orientation (in deg on z)</label>
+        <div class="col-sm-4"><input class="form-control" id="orientation" type="number" step="1"></div>
+      </div>
+      <div class="form-group row">
+        <label for="stay-time" class="col-sm-3 col-form-label">Stay there for (sec)</label>
+        <div class="col-sm-4"><input class="form-control" id="stay-time" type="number" step="1"></div>
+      </div>
+      <div class="form-group row">
+        <label for="reward-value" class="col-sm-3 col-form-label">Reward Value</label>
+        <div class="col-sm-4"><input class="form-control" id="reward-value" type="number" step="1"></div>
+      </div>
+      <button id="createPoint" class="btn btn-primary">Create Point</button>
+    </div>
+</div>
+<!--Custom App compiled with node-->
+<script type="application/javascript" src="./bundle.js"></script>
+</body>
+</html>
