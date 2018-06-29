@@ -19,6 +19,7 @@
   "author": "aoc2",
   "license": "MIT",
   "dependencies": {
+    "openzeppelin-solidity": "^1.10.0",
     "roslib": "^0.20.0",
     "roslibjs-client": "^0.2.1",
     "truffle": "^4.1.13",
