@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <header>
+  <title>ROS Interface</title>
   <meta charset="utf-8" />
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Bootstrap and jQuery -->
   <script src="https://code.jquery.com/jquery-1.11.3.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
@@ -23,6 +24,20 @@
 </header>
 
 <body>
+<div id="statusIndicator" class="page-header">
+  <p id="connecting">
+    Connecting to rosbridge...
+  </p>
+  <p id="connected" style="color:#00D600; display:none">
+    Connected to rosbridge
+  </p>
+  <p id="error" style="color:#FF0000; display:none">
+    Error in the backend!
+  </p>
+  <p id="closed" style="display:none">
+    Connection closed.
+  </p>
+</div>
 <div id="app" class="container">
   <div id="errors"></div>
   <div class="row">
