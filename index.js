@@ -3,9 +3,26 @@ var $ = require('jquery');
 //import Web3 from 'web3';
 var Web3 = require('web3');
 var THREE = require('three');
+var truffle_contract = require('truffle-contract');
+
+var contracts = {};
+var myToken = null;
 
 // Instance Web3 using localhost testrpc
-const web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:9545"));
+var web3Provider;
+if (typeof web3 !== 'undefined')
+{
+    web3Provider = web3.currentProvider;
+    console.log('metamask');
+}
+else
+{
+    // If no injected web3 instance is detected, fall back to Ganache
+    web3Provider = new Web3.providers.HttpProvider('http://localhost:7545');
+    console.log('local');
+}
+// Create the web3 instance
+web3 = new Web3(web3Provider);
 
 // Connecting to ROS 
 var ROSLIB = require('roslib');
@@ -56,6 +73,36 @@ var checkTransaction = function() {
     }
 };
 
+var initContract = function(){
+    $.getJSON('build/contracts/taskToken.json', function(data) {
+      // Get the necessary contract artifact file and instantiate it with truffle-contract
+      var taskArtifact = data;
+      contracts.taskToken = TruffleContract(taskArtifact);
+
+      // Set the provider for our contract
+      contracts.taskToken.setProvider(web3Provider);
+      
+      // Use our contract to retrieve and mark the adopted pets
+      //return App.markAdopted();
+    });
+};
+
+// CP-CV
+// We will use this function to show the status of our accounts, their balances and amount of tokens
+const synchAccounts = () => {
+  $('#default-account').html(`<b>Default Account: ${web3.eth.defaultAccount}</b>`);
+  $('#accounts').html("");
+  web3.eth.accounts.forEach(account => {
+    let balance = web3.eth.getBalance(account);
+    if (myToken) {
+      myToken.balanceOf(account).then(tokens => {
+        $('#accounts').append(`<p><a href="#" class="sell">sell</a> <a href="#" class="buy">buy</a> <span class="address">${account}</span> | <span class="balance">ETH ${balance}</span> | <span class="balance">Tokens ${tokens}</span></p>`);
+      }).catch(showError);
+    } else {
+      $('#accounts').append(`<p><!--<a href="#" class="deploy">Deploy MyToken</a>--> <span class="address">${account}</span> | <span class="balance">ETH ${balance}</span></p>`);
+    }
+  });
+};
 
 // Calling a service
 // -----------------
@@ -77,10 +124,15 @@ $('#createPoint').click(() => {
     var quaternionpose = new THREE.Quaternion;
     quaternionpose.setFromEuler(eurlerpose);
 
+
+
+    // TODO CREATE TASK ON BLOCKCHAIN HERE to get id
+
     // Custom message
     var userTask = new ROSLIB.Message({
-        id : "blabla", // To be generated
+        id : "xx0", // To be generated
         name : $('#task-name').val(),
+        reward : parseFloat($('#reward-value').val()),
         goalPosition_p : {
             position : {
                 x : parseFloat($('#xCoord').val()),
@@ -99,7 +151,10 @@ $('#createPoint').click(() => {
         }
     });
     console.log("Created custom service message for task: " + userTask.name);
-    
+
+
+
+
     // Create a service request
     var request = new ROSLIB.ServiceRequest({
         task: userTask
@@ -152,9 +207,34 @@ deployTransactionBC.advertise(function(request, response) {
     return true;
 });
 
-
-var deployTransaction = function() {
+// Used to contact the eth node to make the transfer
+/*var deployTransaction = function() {
     isTransactionAvailable = false;
     console.log("called");
+
+    var taskInstance;
+
+    web3.eth.getAccounts(function(error, accounts) {
+        if (error) {
+            console.log(error);
+        }
+        contracts.taskToken.deployed().then(function(instance) {
+            taskInstance = instance;
+            // First account is computer, we create a new task then
+            if (idSeller = account[0])
+            {
+                taskInstance.mint(idTask, nameTask, info, {from: idSeller})
+            }
+            else // Transfer task
+            {
+            }
+    
     return;
-};
+};*/
+
+
+// Init functions
+// --------------
+initContract();
+console.log(contracts);
+synchAccounts();
