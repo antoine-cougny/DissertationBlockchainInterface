@@ -130,7 +130,7 @@ $('#createPoint').click(() => {
 
     // Custom message
     var userTask = new ROSLIB.Message({
-        id : "xx0", // To be generated
+        id : $('#task-name').val(), // To be generated
         name : $('#task-name').val(),
         reward : parseFloat($('#reward-value').val()),
         goalPosition_p : {
