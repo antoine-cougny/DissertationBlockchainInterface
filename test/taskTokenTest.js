@@ -1,4 +1,4 @@
-// import assertRevert from "zeppelin-solidity/test/helpers/assertRevert";
+// import assertRevert from "openzeppelin-solidity/test/helpers/assertRevert";
 
 const taskToken = artifacts.require("taskToken");
 
@@ -14,11 +14,11 @@ contract("task token", accounts => {
         let instance = await taskToken.deployed();
         let owner = await instance.owner();
 
-        let token = await instance.mint("id", "coucou", 150, 050, 0, 0,0,070,070, 1);
+        let token = await instance.mint("id", "coucou", "x:150, y:050, z:0, xq:0,yq:0,zq:70,wq:070, wT:1");
 
         let tokens = await instance.tokenOfOwnerByIndex(owner, 0);
         let task = await instance.getTask(tokens);
-        assert.deepEqual(task , ["id", "coucou", 150, 050, 0, 0,0,070,070, 1, false]);
+        assert.deepEqual(task , ["id", "coucou", "x:150, y:050, z:0, xq:0,yq:0,zq:70,wq:070, wT:1", false]);
       });
 
       it("allows to mint only to owner", async () => {
@@ -26,7 +26,7 @@ contract("task token", accounts => {
         let other = accounts[1];
 
         await instance.transferOwnership(other);
-        await assertRevert(instance.mint("id", "coucou", [150, 050, 0], [0,0,070,070], 1));
+        await assertRevert(instance.mint("id", "coucou", "id", "coucou", "x:150, y:050, z:0, xq:0,yq:0,zq:70,wq:070, wT:1"));
       });
     });
 });
