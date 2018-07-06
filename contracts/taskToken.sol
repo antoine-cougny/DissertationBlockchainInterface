@@ -57,10 +57,4 @@ contract taskToken is ERC721Token, Ownable {
 
         _mint(msg.sender, _taskId);
     }
-
-    function transferFromTo(address _from, address _to, uint256 tokenId) public
-    {
-        removeTokenFrom(_from, tokenId);
-        addTokenTo(_to, tokenId);
-    }
 }
