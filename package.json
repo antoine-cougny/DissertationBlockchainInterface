@@ -25,7 +25,7 @@
     "watchify": "~3.11.0"
   },
   "dependencies": {
-    "ganache-cli": "^6.1.4",
+    "ganache-cli": "^6.1.5",
     "openzeppelin-solidity": "^1.10.0",
     "roslib": "^0.20.0",
     "roslibjs-client": "^0.2.1",
