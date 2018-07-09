@@ -1,4 +1,4 @@
-#Ethereum Client for MSc Dissertation Project
+# Ethereum Client for MSc Dissertation Project
 
 TODO / Needed
 - geth (eth client)
