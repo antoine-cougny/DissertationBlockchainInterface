@@ -13,13 +13,13 @@ var web3Provider;
 if (typeof web3 !== 'undefined')
 {
     web3Provider = web3.currentProvider;
-    console.log('metamask');
+    console.log('COnnection with Metamask');
 }
 else
 {
     // If no injected web3 instance is detected, fall back to Ganache
     web3Provider = new Web3.providers.HttpProvider('http://localhost:7545');
-    console.log('local');
+    console.log('Ganache connection');
 }
 // Create the web3 instance
 web3 = new Web3(web3Provider);
@@ -38,12 +38,12 @@ ros.on('error', function(error) {
     document.getElementById('connected').style.display = 'none';
     document.getElementById('closed').style.display = 'none';
     document.getElementById('error').style.display = 'inline';
-    console.log('Error connecting to websocket server: ', error);
+    console.log('Error connecting to ROS websocket server: ', error);
 });
 
 // Find out exactly when we made a connection.
 ros.on('connection', function() {
-    console.log('Connected to websocket server.');
+    console.log('Connected to ROS websocket server.');
     document.getElementById('connecting').style.display = 'none';
     document.getElementById('error').style.display = 'none';
     document.getElementById('closed').style.display = 'none';
@@ -90,7 +90,7 @@ var initContract = function(){
 // CP-CV
 // We will use this function to show the status of our accounts, their balances and amount of tokens
 const synchAccounts = () => {
-  $('#default-account').html(`<b>Default Account: ${web3.eth.defaultAccount}</b>`);
+  $('#default-account').html(`<b>First Account (computer): ${web3.eth.accounts[0]}</b>`);
   $('#accounts').html("");
   web3.eth.accounts.forEach(account => {
     let balance = web3.eth.getBalance(account);
@@ -102,6 +102,47 @@ const synchAccounts = () => {
       $('#accounts').append(`<p><!--<a href="#" class="deploy">Deploy MyToken</a>--> <span class="address">${account}</span> | <span class="balance">ETH ${balance}</span></p>`);
     }
   });
+};
+
+
+var numberOfTasks = 0;
+
+// Get number of total tasks on the blockchain
+// -------------------------------------------
+const getNumberOfTokenMinted = () => {
+    var taskInstance;
+    
+    contracts.taskToken.deployed().then(function(instance) {
+        taskInstance = instance;
+        
+        return taskInstance.totalSupply.call();
+    }).then(function(e) {
+        numberOfTasks = e.toNumber();
+            console.log("Number of task tokens on the blockchain: " + numberOfTasks);
+    }).catch(function(err) {
+        console.log(err.message);
+    });
+};
+
+// Mint a token on the blockchain
+// ------------------------------
+const mintTaskToken = (name, info) => {
+    var taskInstance;
+    console.log("mint a new token fct");
+    contracts.taskToken.deployed().then(function(instance, name, info) {
+        taskInstance = instance;
+        // Mint the token
+        console.log("2");
+        return taskInstance.mint(name, info, {from: web3.eth.accounts[0]})
+    }).then(function(instance) {
+        numberOfTasks += 1;
+                console.log("3");
+        console.log(instance);
+        console.log("nb tasks " + numberOfTasks);
+    }).catch(function(err) {
+        console.log(err.message);
+    });
+        
 };
 
 // Calling a service
@@ -127,11 +168,7 @@ $('#createPoint').click(() => {
 
 
     // TODO CREATE TASK ON BLOCKCHAIN HERE to get id
-
-    // Custom message
-    var userTask = new ROSLIB.Message({
-        id : $('#task-name').val(), // To be generated
-        name : $('#task-name').val(),
+    var infoStringify = JSON.stringify({
         reward : parseFloat($('#reward-value').val()),
         goalPosition_p : {
             position : {
@@ -150,22 +187,68 @@ $('#createPoint').click(() => {
             waitTime : parseFloat($('#stay-time').val())
         }
     });
-    console.log("Created custom service message for task: " + userTask.name);
+    
+    //mintTaskToken($('#task-name').val(), infoStringify);
+    var taskInstance;
+    var name = $('#task-name').val();
 
+    console.log("Minting token");
+    contracts.taskToken.deployed().then(function(instance) {
+        taskInstance = instance;
+        // Mint the token
+        console.log("name: " + name + " info: " + infoStringify);
+        return taskInstance.mint(name, infoStringify, {from: web3.eth.accounts[0], gas: 30000000})
+    }).then(function(instance) {
+        console.log(instance);
+        console.log("Id of the new task: " + numberOfTasks);
+        
+        
+        
+        
+        // Custom message
+        var userTask = new ROSLIB.Message({
+            id : numberOfTasks.toString(), // To be generated // Get
+            name : $('#task-name').val(),
+            reward : parseFloat($('#reward-value').val()),
+            goalPosition_p : {
+                position : {
+                    x : parseFloat($('#xCoord').val()),
+                    y : parseFloat($('#yCoord').val()),
+                    z : parseFloat($('#zCoord').val())
+                },
+                orientation : {
+                    x : quaternionpose.x,
+                    y : quaternionpose.y,
+                    z : quaternionpose.z,
+                    w : quaternionpose.w
+                }
+            },
+            toDo : {
+                waitTime : parseFloat($('#stay-time').val())
+            }
+        });
+        console.log("Created custom service message for task: " + userTask.name);     
+        
 
+        // Create a service request
+        var request = new ROSLIB.ServiceRequest({
+            task: userTask
+        });
 
+        // Call the service
+        sendTaskToTrader_srvC.callService(request, function(result) {
+            console.log('Result for service call on '
+              + sendTaskToTrader_srvC.name
+              + ': '
+              + result.auctionReady);
+        });
 
-    // Create a service request
-    var request = new ROSLIB.ServiceRequest({
-        task: userTask
-    });
-
-    // Call the service
-    sendTaskToTrader_srvC.callService(request, function(result) {
-        console.log('Result for service call on '
-          + sendTaskToTrader_srvC.name
-          + ': '
-          + result.auctionReady);
+        //numberOfTasks += 1;
+        getNumberOfTokenMinted(); // Update the total number of token locally        
+            
+    }).catch(function(err) {
+        // Error function on the minting of the token
+        console.log(err.message);
     });
 });
 
@@ -208,9 +291,9 @@ deployTransactionBC.advertise(function(request, response) {
 });
 
 // Used to contact the eth node to make the transfer
-/*var deployTransaction = function() {
-    isTransactionAvailable = false;
-    console.log("called");
+var deployTransaction = function() {
+
+    console.log("Transfer transaction");
 
     var taskInstance;
 
@@ -220,21 +303,23 @@ deployTransactionBC.advertise(function(request, response) {
         }
         contracts.taskToken.deployed().then(function(instance) {
             taskInstance = instance;
-            // First account is computer, we create a new task then
-            if (idSeller = account[0])
-            {
-                taskInstance.mint(idTask, nameTask, info, {from: idSeller})
-            }
-            else // Transfer task
-            {
-            }
-    
-    return;
-};*/
+            // Transfer task
+            return taskInstance.transferFrom(idSeller, idBuyer, idTask, {from: web3.eth.accounts[0], gas: 30000000})
+        }).then(function(instance) {
+            console.log("Transfer initiated");
+            // TODO: use parameter in function instead of global var
+            console.log("Ready for a new transaction");
+            isTransactionAvailable = false;
+        }).catch(function(err) {
+            console.log(err.message);
+        });
+    });
+};
+
 
 
 // Init functions
 // --------------
 initContract();
-console.log(contracts);
 synchAccounts();
+getNumberOfTokenMinted();
