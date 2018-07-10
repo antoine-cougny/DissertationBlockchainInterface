@@ -8,6 +8,7 @@
     "url": "https://framagit.org/ant0ine/DissertationBlockchainInterface"
   },
   "scripts": {
+    "dev": "lite-server",
     "test": "npx truffle test",
     "start": "npx truffle compile && watchify index.js -o bundle.js -v",
     "start_js": "npx watchify index.js -o bundle.js -v"
@@ -26,6 +27,7 @@
   },
   "dependencies": {
     "ganache-cli": "^6.1.5",
+    "lite-server": "^2.4.0",
     "openzeppelin-solidity": "^1.10.0",
     "roslib": "^0.20.0",
     "roslibjs-client": "^0.2.1",
