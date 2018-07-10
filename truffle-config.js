@@ -25,7 +25,7 @@ module.exports = {
       host: "127.0.0.1",
       port: 7545,
       network_id: "*", // Match any network id
-      gas: 3500000
+      gas: 35000000
     },
     ourTestNet: {
       host: "127.0.0.1",
