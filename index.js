@@ -21,7 +21,7 @@ var initWeb3 = function()
     else
     {
         // If no injected web3 instance is detected, fall back to Ganache
-        web3Provider = new Web3.providers.HttpProvider('http://localhost:7545');
+        web3Provider = new Web3.providers.HttpProvider('http://localhost:8042');
         console.log('Direct connection to Ganache');
     }
     // Create the web3 instance
@@ -58,7 +58,7 @@ ros.on('connection', function() {
 });
 
 ros.on('close', function() {
-    console.log('Connection closed.');
+    console.log('ROS connection closed.');
     document.getElementById('connecting').style.display = 'none';
     document.getElementById('connected').style.display = 'none';
     document.getElementById('closed').style.display = 'inline';
@@ -85,6 +85,7 @@ var initContract = function(){
 
       // Set the provider for our contract
       contracts.taskToken.setProvider(web3Provider);
+      console.log("ABI has been read.");
       
       // Use our contract to retrieve and mark the adopted pets
       //return App.markAdopted();
@@ -93,7 +94,7 @@ var initContract = function(){
 
 // CP-CV
 // We will use this function to show the status of our accounts, their balances and amount of tokens
-const synchAccounts = () => {
+const synchAccounts = () => {/*
   $('#default-account').html(`<b>First Account (computer): ${web3.eth.accounts[0]}</b>`);
   $('#accounts').html("");
   web3.eth.accounts.forEach(account => {
@@ -105,7 +106,7 @@ const synchAccounts = () => {
     } else {
       $('#accounts').append(`<p><!--<a href="#" class="deploy">Deploy MyToken</a>--> <span class="address">${account}</span> | <span class="balance">ETH ${balance}</span></p>`);
     }
-  });
+  });*/
 };
 
 
@@ -327,4 +328,9 @@ var deployTransaction = function() {
 initWeb3();
 initContract();
 synchAccounts();
-getNumberOfTokenMinted();
+console.log('Waiting 1sec before accessing the deployed contract');
+setTimeout(function(){
+    console.log("Getting number of tokens on blockchain");
+    getNumberOfTokenMinted();
+},1000);
+
