@@ -7,22 +7,26 @@ var truffle_contract = require('truffle-contract');
 
 var contracts = {};
 var myToken = null;
-
+const nullAddress = "0x0000000000000000000000000000000000000000";
 // Instance Web3 using localhost testrpc
 var web3Provider;
-if (typeof web3 !== 'undefined')
+
+var initWeb3 = function()
 {
-    web3Provider = web3.currentProvider;
-    console.log('metamask');
+    if (typeof web3 !== 'undefined')
+    {
+        web3Provider = web3.currentProvider;
+        console.log('Connected with Metamask');
+    }
+    else
+    {
+        // If no injected web3 instance is detected, fall back to Ganache
+        web3Provider = new Web3.providers.HttpProvider('http://localhost:7545');
+        console.log('Direct connection to Ganache');
+    }
+    // Create the web3 instance
+    web3 = new Web3(web3Provider);
 }
-else
-{
-    // If no injected web3 instance is detected, fall back to Ganache
-    web3Provider = new Web3.providers.HttpProvider('http://localhost:7545');
-    console.log('local');
-}
-// Create the web3 instance
-web3 = new Web3(web3Provider);
 
 // Connecting to ROS 
 var ROSLIB = require('roslib');
@@ -235,6 +239,8 @@ deployTransactionBC.advertise(function(request, response) {
 
 // Init functions
 // --------------
+initWeb3();
 initContract();
-console.log(contracts);
+//console.log(contracts);
 synchAccounts();
+
