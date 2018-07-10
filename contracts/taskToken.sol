@@ -11,7 +11,6 @@ contract taskToken is ERC721Token, Ownable {
     // string public constant symbol = "taskT";
 
     struct taskFull{
-        string id;
         string name;
 
         string info;
@@ -27,28 +26,24 @@ contract taskToken is ERC721Token, Ownable {
         ERC721Token("taskToken", "T_T"){}
     
     // Get info on a token
-    function getTask( uint256 _taskId ) public view returns(string id,
-                                                            string nameT,
+    function getTask( uint256 _taskId ) public view returns(string nameT,
                                                             string info, 
                                                             bool  done
                                                            )
     {
         taskFull memory _task = tasksArray[_taskId];
 
-        id = _task.id;
         nameT = _task.name;
         info = _task.info;
         done = _task.done;
     }
 
     // Create a new token
-    function mint(string _id,
-                  string _name,
+    function mint(string _name,
                   string _info
                  ) public payable returns (uint _taskId)
     {
-        taskFull memory _task = taskFull({ id:   _id,
-                                           name: _name,
+        taskFull memory _task = taskFull({ name: _name,
                                            info: _info,
                                            done: false
                                          });
