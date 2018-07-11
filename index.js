@@ -363,16 +363,63 @@ var deployTransaction = function() {
     });
 };
 
+// Advertise Service to mark task as done
+// --------------------------------------
+var idTaskDone = 0;
+var idTaskOwner = "";
+var markTransactionDoneAvailable = false;
 
+var markTaskDoneBC = new ROSLIB.Service({
+    ros : ros,
+    name : '/markTaskDoneBC',
+    serviceType : 'blockchain_handler/transactionBC'
+});
+
+var markTaskDone = function() {
+    // TODO: use parameter in function instead of global var
+    console.log("mTD: set Done flag transaction");
+
+    var taskInstance;
+    web3.eth.getAccounts(function(error, accounts) {
+        if (error) {
+            console.log(error);
+        }
+        contracts.taskToken.deployed().then(function(instance) {
+            taskInstance = instance;
+            // Transfer task
+            return taskInstance.setTaskDone(idTaskDone, {from: idTaskOwner, gas: 30000000});
+        }).then(function(instance) {
+            console.log("mTD: Task " + idTaskDone + " has been set as done");
+        }).catch(function(err) {
+            console.log(err.message);
+        });
+    });
+    return synchTokens();
+};
+
+deployTransactionBC.advertise(function(request, response) {
+    console.log('mTD: Received service request. Robot ' + request.idSeller
+                + ' has finished task ' + request.idTask);
+    if (!markTransactionDoneAvailable)
+    {
+        console.log("mTD: We accept to process the incomming transaction");
+        response['status'] = true;
+        idTaskDone = request.idTask;
+        idTaskOwner = request.idSeller;
+        markTransactionDoneAvailable = true;
+    }
+    else
+    {
+        console.warn("mTD: The node is already busy, " 
+                    + "we declined the incomming transaction");
+        response['status'] = false;
+    }
+    return true;
+});
 
 // Init functions
 // --------------
 initWeb3();
 initContract();
-synchAccounts();
-console.log('Waiting 1sec before accessing the deployed contract');
-setTimeout(function(){
-    console.log("Getting number of tokens on blockchain");
-    getNumberOfTokenMinted();
-},1000);
+//synchAccounts();
 
