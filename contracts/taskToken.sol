@@ -37,6 +37,13 @@ contract taskToken is ERC721Token, Ownable {
         info = _task.info;
         done = _task.done;
     }
+    
+    function setTaskDone( uint _taskId ) public payable
+    {
+        require( msg.sender == ownerOf(_taskId) || msg.sender == owner);
+        taskFull storage _task = tasksArray[_taskId];
+        _task.done = true;
+    }
 
     // Create a new token
     function mint(string _name,
