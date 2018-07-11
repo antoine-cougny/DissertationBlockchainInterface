@@ -10,19 +10,21 @@ var myToken = null;
 const nullAddress = "0x0000000000000000000000000000000000000000";
 // Instance Web3 using localhost testrpc
 var web3Provider;
+// Number of deployed token on the network
+var numberOfTasks = 0;
 
 var initWeb3 = function()
 {
     if (typeof web3 !== 'undefined')
     {
         web3Provider = web3.currentProvider;
-        console.log('Connected with Metamask');
+        console.log('CONNECTION: Connected with Metamask');
     }
     else
     {
         // If no injected web3 instance is detected, fall back to Ganache
         web3Provider = new Web3.providers.HttpProvider('http://localhost:8042');
-        console.log('Direct connection to Ganache');
+        console.log('CONNECTION: Direct rpc connection');
     }
     // Create the web3 instance
     web3 = new Web3(web3Provider);
@@ -42,12 +44,12 @@ ros.on('error', function(error) {
     document.getElementById('connected').style.display = 'none';
     document.getElementById('closed').style.display = 'none';
     document.getElementById('error').style.display = 'inline';
-    console.log('Error connecting to ROS websocket server: ', error);
+    console.log('CONNECTION: Error connecting to ROS websocket server: ', error);
 });
 
 // Find out exactly when we made a connection.
 ros.on('connection', function() {
-    console.log('Connected to ROS websocket server.');
+    console.log('CONNECTION: Connected to ROS websocket server.');
     document.getElementById('connecting').style.display = 'none';
     document.getElementById('error').style.display = 'none';
     document.getElementById('closed').style.display = 'none';
@@ -55,10 +57,11 @@ ros.on('connection', function() {
     // Monitor incomming transaction every second
     // Ugly solution
     checkTransaction();
+    checkTransactionTaskDone();
 });
 
 ros.on('close', function() {
-    console.log('ROS connection closed.');
+    console.log('CONNECTION: ROS connection closed.');
     document.getElementById('connecting').style.display = 'none';
     document.getElementById('connected').style.display = 'none';
     document.getElementById('closed').style.display = 'inline';
@@ -77,6 +80,19 @@ var checkTransaction = function() {
     }
 };
 
+var checkTransactionTaskDone = function() {
+    if (!markTransactionDoneAvailable)
+    {
+        setTimeout(checkTransactionTaskDone, 1000);
+        return;
+    }
+    else
+    {
+        markTaskDone();
+    }
+};
+
+
 var initContract = function(){
     $.getJSON('build/contracts/taskToken.json', function(data) {
       // Get the necessary contract artifact file and instantiate it with truffle-contract
@@ -85,32 +101,61 @@ var initContract = function(){
 
       // Set the provider for our contract
       contracts.taskToken.setProvider(web3Provider);
-      console.log("ABI has been read.");
+      console.log("INITC: ABI has been read.");
       
-      // Use our contract to retrieve and mark the adopted pets
-      //return App.markAdopted();
+      contracts.taskToken.deployed().then(function(instance) {
+         myToken = instance;
+         return synchAccounts();
+      });
+
+      // Use our contract to get the number of tasks already on the network
+      return getNumberOfTokenMinted();
     });
 };
 
 // CP-CV
 // We will use this function to show the status of our accounts, their balances and amount of tokens
-const synchAccounts = () => {/*
-  $('#default-account').html(`<b>First Account (computer): ${web3.eth.accounts[0]}</b>`);
-  $('#accounts').html("");
-  web3.eth.accounts.forEach(account => {
-    let balance = web3.eth.getBalance(account);
-    if (myToken) {
-      myToken.balanceOf(account).then(tokens => {
-        $('#accounts').append(`<p><a href="#" class="sell">sell</a> <a href="#" class="buy">buy</a> <span class="address">${account}</span> | <span class="balance">ETH ${balance}</span> | <span class="balance">Tokens ${tokens}</span></p>`);
-      }).catch(showError);
-    } else {
-      $('#accounts').append(`<p><!--<a href="#" class="deploy">Deploy MyToken</a>--> <span class="address">${account}</span> | <span class="balance">ETH ${balance}</span></p>`);
-    }
-  });*/
+const synchAccounts = () => {
+    $('#default-account').html(`<b>First Account (computer): ${web3.eth.accounts[0]}</b>`);
+    $('#accounts').html("");
+    web3.eth.accounts.forEach(account => {
+        let balance = web3.fromWei(web3.eth.getBalance(account), "ether");
+        if (myToken) 
+        {
+            myToken.balanceOf(account).then(tokens => {
+                $('#accounts').append(`<p><a href="#" class="sell">sell</a> <a href="#" class="buy">buy</a> `+
+                                      `<span class="address">${account}</span> | `+
+                                      `<span class="balance">ETH ${balance}</span> | `+
+                                      `<span class="balance">Tokens ${tokens}</span></p>`);
+            }).catch(showError);
+        }
+        else
+        {
+            $('#accounts').append(`<p><!--<a href="#" class="deploy">Deploy MyToken</a>--> `+
+                                  `<span class="address">${account}</span> | `+
+                                  `<span class="balance">ETH ${balance}</span></p>`);
+        }
+    });
 };
 
+const synchTokens = () => {
+    console.log("SYNC_T: Starting");
+    $('#number-tokens').html("");
+    $('#number-tokens').append(`<p>Number of tasks deployed: ${numberOfTasks}</p>`);
+    $('#tokens').html("");
+    var deployedToken;
+    
+    for (var i = 0; i < numberOfTasks; i++)
+    {
+        deployedToken = myToken.getTask.call(i).then(info => {
+            $('#tokens').append(`<p>Token Name: ${info[0]} | Token Owner: ?? | Task Done: ${info[2]} | Token Info: ${info[1]}</p>`);
+        }).catch(function(err) {
+            console.log(err.message);
+        });
+    }
+    console.log("SYNC_T: Done");
+};
 
-var numberOfTasks = 0;
 
 // Get number of total tasks on the blockchain
 // -------------------------------------------
@@ -119,35 +164,34 @@ const getNumberOfTokenMinted = () => {
     
     contracts.taskToken.deployed().then(function(instance) {
         taskInstance = instance;
-        
         return taskInstance.totalSupply.call();
     }).then(function(e) {
         numberOfTasks = e.toNumber();
-            console.log("Number of task tokens on the blockchain: " + numberOfTasks);
+        console.log("NBTOKEN: Number of task tokens on the blockchain: " + numberOfTasks);
+        return synchTokens();
     }).catch(function(err) {
         console.log(err.message);
     });
+    
+    
 };
 
 // Mint a token on the blockchain
 // ------------------------------
 const mintTaskToken = (name, info) => {
     var taskInstance;
-    console.log("mint a new token fct");
+    console.log("MINT: Mint a new token fct");
     contracts.taskToken.deployed().then(function(instance, name, info) {
         taskInstance = instance;
         // Mint the token
-        console.log("2");
-        return taskInstance.mint(name, info, {from: web3.eth.accounts[0]})
+        return taskInstance.mint(name, info, {from: web3.eth.accounts[0], gas:300000})
     }).then(function(instance) {
         numberOfTasks += 1;
-                console.log("3");
-        console.log(instance);
-        console.log("nb tasks " + numberOfTasks);
+        //console.log(instance);
+        console.log("MINT: nb tasks " + numberOfTasks);
     }).catch(function(err) {
-        console.log(err.message);
+        console.error(err.message);
     });
-        
 };
 
 // Calling a service
@@ -197,15 +241,15 @@ $('#createPoint').click(() => {
     var taskInstance;
     var name = $('#task-name').val();
 
-    console.log("Minting token");
+    console.log("EVENT: Minting token");
     contracts.taskToken.deployed().then(function(instance) {
         taskInstance = instance;
         // Mint the token
         console.log("name: " + name + " info: " + infoStringify);
-        return taskInstance.mint(name, infoStringify, {from: web3.eth.accounts[0], gas: 30000000})
+        return taskInstance.mint(name, infoStringify, {from: web3.eth.accounts[0], gas: 300000})
     }).then(function(instance) {
         console.log(instance);
-        console.log("Id of the new task: " + numberOfTasks);
+        console.log("EVENT: Id of the new task: " + numberOfTasks);
         
         
         
@@ -232,7 +276,7 @@ $('#createPoint').click(() => {
                 waitTime : parseFloat($('#stay-time').val())
             }
         });
-        console.log("Created custom service message for task: " + userTask.name);     
+        console.log("EVENT: Created custom service message for task: " + userTask.name);     
         
 
         // Create a service request
@@ -242,7 +286,7 @@ $('#createPoint').click(() => {
 
         // Call the service
         sendTaskToTrader_srvC.callService(request, function(result) {
-            console.log('Result for service call on '
+            console.log('EVENT: Result for service call on '
               + sendTaskToTrader_srvC.name
               + ': '
               + result.auctionReady);
@@ -274,12 +318,12 @@ var deployTransactionBC = new ROSLIB.Service({
 
 // Use the advertise() method to indicate that we want to provide this service
 deployTransactionBC.advertise(function(request, response) {
-    console.log('Received service request on ' + deployTransactionBC.name 
+    console.log('nT: Received service request on ' + deployTransactionBC.name 
                 + ': \n' + request.idTask + " : " + request.idSeller 
                 + " => " + request.idBuyer);
     if (!isTransactionAvailable)
     {
-        console.log("We accept to process the incomming transaction");
+        console.log("nT: We accept to process the incomming transaction");
         response['status'] = true;
         idTask = request.idTask;
         idBuyer = request.idBuyer;
@@ -288,7 +332,7 @@ deployTransactionBC.advertise(function(request, response) {
     }
     else
     {
-        console.warn("The node is already busy, " 
+        console.warn("nT: The node is already busy, " 
                     + "we declined the incomming transaction");
         response['status'] = false;
     }
@@ -297,11 +341,10 @@ deployTransactionBC.advertise(function(request, response) {
 
 // Used to contact the eth node to make the transfer
 var deployTransaction = function() {
-
-    console.log("Transfer transaction");
+    // TODO: use parameter in function instead of global var
+    console.log("DT: Transfer transaction");
 
     var taskInstance;
-
     web3.eth.getAccounts(function(error, accounts) {
         if (error) {
             console.log(error);
@@ -309,11 +352,10 @@ var deployTransaction = function() {
         contracts.taskToken.deployed().then(function(instance) {
             taskInstance = instance;
             // Transfer task
-            return taskInstance.transferFrom(idSeller, idBuyer, idTask, {from: web3.eth.accounts[0], gas: 30000000})
+            console.log("DT: Transfer initiated");
+            return taskInstance.transferFrom(idSeller, idBuyer, idTask, {from: web3.eth.accounts[0], gas: 30000000});
         }).then(function(instance) {
-            console.log("Transfer initiated");
-            // TODO: use parameter in function instead of global var
-            console.log("Ready for a new transaction");
+            console.log("DT: Ready for a new transaction");
             isTransactionAvailable = false;
         }).catch(function(err) {
             console.log(err.message);
