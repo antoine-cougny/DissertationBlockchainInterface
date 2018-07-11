@@ -397,7 +397,7 @@ var markTaskDone = function() {
     return synchTokens();
 };
 
-deployTransactionBC.advertise(function(request, response) {
+markTaskDoneBC.advertise(function(request, response) {
     console.log('mTD: Received service request. Robot ' + request.idSeller
                 + ' has finished task ' + request.idTask);
     if (!markTransactionDoneAvailable)
