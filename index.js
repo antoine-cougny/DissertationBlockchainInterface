@@ -94,7 +94,7 @@ var checkTransactionTaskDone = function() {
 
 
 var initContract = function(){
-    $.getJSON('build/contracts/taskToken.json', function(data) {
+  $.getJSON('build/contracts/taskToken.json', function(data) {
       // Get the necessary contract artifact file and instantiate it with truffle-contract
       var taskArtifact = data;
       contracts.taskToken = TruffleContract(taskArtifact);
@@ -105,12 +105,11 @@ var initContract = function(){
       
       contracts.taskToken.deployed().then(function(instance) {
          myToken = instance;
-         //return synchTokens();
       });
 
       // Use our contract to get the number of tasks already on the network
       return getNumberOfTokenMinted();
-    });
+  });
 };
 
 // We will use this function to show the status of our accounts, their balances and amount of tokens
@@ -149,20 +148,31 @@ const synchTokens = () => {
     $('#number-tokens').html("");
     $('#number-tokens').append(`<p>Number of tasks deployed: ${numberOfTasks}</p>`);
     $('#tokens').html("");
-    var deployedToken;
-    
-    for (var i = 0; i < numberOfTasks; i++)
+    synchTokensRecursively(0);
+};
+
+const synchTokensRecursively = (i) => {
+    if (i == numberOfTasks)
     {
-        deployedToken = myToken.getTask.call(i).then(info => { // I don't why thhis call is faster then the synch of the accounts
-            $('#tokens').append(`<p>Token Name: ${info[0]} | Token Owner: ?? | Task Done: ${info[2]} | Token Info: ${info[1]}</p>`);
+        console.log("SYNC_T: Done");
+        return synchAccounts();
+    }
+    else
+    {
+        var deployedToken;
+        var infoToken;
+        deployedToken = myToken.getTask.call(i).then(info => {
+            infoToken = info;
+            return myToken.ownerOf.call(i)
+        }).then(owner => {
+            $('#tokens').append(`<p>Token Name: ${infoToken[0]} | Token Owner: ${owner} | Task Done: ${infoToken[2]} | Token Info: ${infoToken[1]}</p>`);
+            return synchTokensRecursively(i+1);
         }).catch(function(err) {
             console.log(err.message);
         });
     }
-    console.log("SYNC_T: Done");
-    return synchAccounts();
 };
-
+        
 
 // Get number of total tasks on the blockchain
 // -------------------------------------------
@@ -362,6 +372,7 @@ var deployTransaction = function() {
         }).then(function(instance) {
             console.log("DT: Ready for a new transaction");
             isTransactionAvailable = false;
+            return synchAccounts();
         }).catch(function(err) {
             console.log(err.message);
         });
