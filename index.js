@@ -105,7 +105,7 @@ var initContract = function(){
       
       contracts.taskToken.deployed().then(function(instance) {
          myToken = instance;
-         return synchAccounts();
+         //return synchTokens();
       });
 
       // Use our contract to get the number of tasks already on the network
@@ -113,31 +113,37 @@ var initContract = function(){
     });
 };
 
-// CP-CV
 // We will use this function to show the status of our accounts, their balances and amount of tokens
 const synchAccounts = () => {
+    console.log("SYNC_A: Starting");
     $('#default-account').html(`<b>First Account (computer): ${web3.eth.accounts[0]}</b>`);
     $('#accounts').html("");
-    web3.eth.accounts.forEach(account => {
-        let balance = web3.fromWei(web3.eth.getBalance(account), "ether");
-        if (myToken) 
-        {
-            myToken.balanceOf(account).then(tokens => {
-                $('#accounts').append(`<p><a href="#" class="sell">sell</a> <a href="#" class="buy">buy</a> `+
-                                      `<span class="address">${account}</span> | `+
-                                      `<span class="balance">ETH ${balance}</span> | `+
-                                      `<span class="balance">Tokens ${tokens}</span></p>`);
-            }).catch(showError);
-        }
-        else
-        {
-            $('#accounts').append(`<p><!--<a href="#" class="deploy">Deploy MyToken</a>--> `+
-                                  `<span class="address">${account}</span> | `+
-                                  `<span class="balance">ETH ${balance}</span></p>`);
-        }
-    });
+    synchAccountsRecursively(0);
 };
 
+const synchAccountsRecursively = (i) => {
+    if (i == web3.eth.accounts.length)
+    {
+        console.log("SYNC_A: Done");
+        return
+    }
+    else
+    {
+        var account = web3.eth.accounts[i];
+        var balance = web3.fromWei(web3.eth.getBalance(account), "ether");
+        myToken.balanceOf.call(account).then(tokens => {
+            $('#accounts').append(`<p><!--<a href="#" class="sell">sell</a> <a href="#" class="buy">buy</a>--> `+
+                                  `<span class="address">${account}</span> | `+
+                                  `<span class="balance">ETH ${balance}</span> | `+
+                                  `<span class="balance">Tokens ${tokens}</span></p>`);
+            return synchAccountsRecursively(i+1);
+        }).catch(function(err) {
+            console.log(err.message)
+        });
+    }
+};
+
+// Same with the different tokens
 const synchTokens = () => {
     console.log("SYNC_T: Starting");
     $('#number-tokens').html("");
@@ -147,24 +153,22 @@ const synchTokens = () => {
     
     for (var i = 0; i < numberOfTasks; i++)
     {
-        deployedToken = myToken.getTask.call(i).then(info => {
+        deployedToken = myToken.getTask.call(i).then(info => { // I don't why thhis call is faster then the synch of the accounts
             $('#tokens').append(`<p>Token Name: ${info[0]} | Token Owner: ?? | Task Done: ${info[2]} | Token Info: ${info[1]}</p>`);
         }).catch(function(err) {
             console.log(err.message);
         });
     }
     console.log("SYNC_T: Done");
+    return synchAccounts();
 };
 
 
 // Get number of total tasks on the blockchain
 // -------------------------------------------
 const getNumberOfTokenMinted = () => {
-    var taskInstance;
-    
     contracts.taskToken.deployed().then(function(instance) {
-        taskInstance = instance;
-        return taskInstance.totalSupply.call();
+        return instance.totalSupply.call();
     }).then(function(e) {
         numberOfTasks = e.toNumber();
         console.log("NBTOKEN: Number of task tokens on the blockchain: " + numberOfTasks);
@@ -236,7 +240,7 @@ $('#createPoint').click(() => {
             waitTime : parseFloat($('#stay-time').val())
         }
     });
-    
+
     //mintTaskToken($('#task-name').val(), infoStringify);
     var taskInstance;
     var name = $('#task-name').val();
@@ -245,15 +249,15 @@ $('#createPoint').click(() => {
     contracts.taskToken.deployed().then(function(instance) {
         taskInstance = instance;
         // Mint the token
-        console.log("name: " + name + " info: " + infoStringify);
+        console.log("MINTING: name: " + name + " info: " + infoStringify);
         return taskInstance.mint(name, infoStringify, {from: web3.eth.accounts[0], gas: 300000})
     }).then(function(instance) {
         console.log(instance);
         console.log("EVENT: Id of the new task: " + numberOfTasks);
-        
-        
-        
-        
+
+
+
+
         // Custom message
         var userTask = new ROSLIB.Message({
             id : numberOfTasks.toString(), // To be generated // Get
@@ -278,7 +282,6 @@ $('#createPoint').click(() => {
         });
         console.log("EVENT: Created custom service message for task: " + userTask.name);     
         
-
         // Create a service request
         var request = new ROSLIB.ServiceRequest({
             task: userTask
@@ -292,9 +295,11 @@ $('#createPoint').click(() => {
               + result.auctionReady);
         });
 
+
+
+        // Update the total number of token locally
         //numberOfTasks += 1;
-        getNumberOfTokenMinted(); // Update the total number of token locally        
-            
+        return getNumberOfTokenMinted();
     }).catch(function(err) {
         // Error function on the minting of the token
         console.log(err.message);
@@ -308,7 +313,7 @@ var idTask = "",
     idBuyer = "",
     idSeller = ""
     isTransactionAvailable = false;
-     
+
 // The Service object does double duty for both calling and advertising services
 var deployTransactionBC = new ROSLIB.Service({
     ros : ros,
@@ -421,5 +426,4 @@ markTaskDoneBC.advertise(function(request, response) {
 // --------------
 initWeb3();
 initContract();
-//synchAccounts();
 
