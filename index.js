@@ -165,7 +165,7 @@ const synchTokensRecursively = (i) => {
             infoToken = info;
             return myToken.ownerOf.call(i)
         }).then(owner => {
-            $('#tokens').append(`<p>Token Name: ${infoToken[0]} | Token Owner: ${owner} | Task Done: ${infoToken[2]} | Token Info: ${infoToken[1]}</p>`);
+            $('#tokens').append(`<p>Id: ${i} | Token Name: ${infoToken[0]} | Token Owner: ${owner} | Task Done: ${infoToken[2]} | Token Info: ${infoToken[1]}</p>`);
             return synchTokensRecursively(i+1);
         }).catch(function(err) {
             console.log(err.message);
@@ -372,7 +372,7 @@ var deployTransaction = function() {
         }).then(function(instance) {
             console.log("DT: Ready for a new transaction");
             isTransactionAvailable = false;
-            return synchAccounts();
+            return synchTokens();
         }).catch(function(err) {
             console.log(err.message);
         });
@@ -393,7 +393,7 @@ var markTaskDoneBC = new ROSLIB.Service({
 
 var markTaskDone = function() {
     // TODO: use parameter in function instead of global var
-    console.log("mTD: set Done flag transaction");
+    console.log("mTD: setting Done flag transaction");
 
     var taskInstance;
     web3.eth.getAccounts(function(error, accounts) {
@@ -403,14 +403,17 @@ var markTaskDone = function() {
         contracts.taskToken.deployed().then(function(instance) {
             taskInstance = instance;
             // Transfer task
-            return taskInstance.setTaskDone(idTaskDone, {from: idTaskOwner, gas: 30000000});
+            return taskInstance.setTaskDone(idTaskDone, {from: web3.eth.accounts[0], gas: 30000000});//{from: idTaskOwner, gas: 30000000});
         }).then(function(instance) {
             console.log("mTD: Task " + idTaskDone + " has been set as done");
+            markTransactionDoneAvailable = false;
+            return synchTokens();
         }).catch(function(err) {
-            console.log(err.message);
+            console.error(err.message);
+            // TODO find a better implementation not to lose the transaction
+            markTransactionDoneAvailable = false;
         });
     });
-    return synchTokens();
 };
 
 markTaskDoneBC.advertise(function(request, response) {
