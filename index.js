@@ -1,6 +1,4 @@
-//import $ from 'jquery';
 var $ = require('jquery');
-//import Web3 from 'web3';
 var Web3 = require('web3');
 var THREE = require('three');
 var truffle_contract = require('truffle-contract');
@@ -218,9 +216,15 @@ var sendTaskToTrader_srvC = new ROSLIB.Service({
 
 // Every time we click on the create button, we will send a new task
 $('#createPoint').click(() => {
-
+    createNewTask($('#task-name').val(), $('#reward-value').val(),
+                  $('#xCoord').val(), $('#yCoord').val(), $('#zCoord').val(),
+                  $('#orientation').val, $('#stay-time').val()
+    );
+});
+    
+const createNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, stayTime) {
     // Get the orientation
-    var beta = 0; var gamma = 0; var alpha = $('#orientation').val;
+    var beta = 0; var gamma = 0; var alpha = zOrient;
     var x_radian = ((beta + 360) / 360 * 2 * Math.PI) % (2 * Math.PI);
     var y_radian = ((gamma + 360) / 360 * 2 * Math.PI) % (2 * Math.PI);
     var z_radian = ((alpha + 360) / 360 * 2 * Math.PI) % (2 * Math.PI);
@@ -229,15 +233,13 @@ $('#createPoint').click(() => {
     quaternionpose.setFromEuler(eurlerpose);
 
 
-
-    // TODO CREATE TASK ON BLOCKCHAIN HERE to get id
     var infoStringify = JSON.stringify({
-        reward : parseFloat($('#reward-value').val()),
+        reward : parseFloat(reward),
         goalPosition_p : {
             position : {
-                x : parseFloat($('#xCoord').val()),
-                y : parseFloat($('#yCoord').val()),
-                z : parseFloat($('#zCoord').val())
+                    x : parseFloat(xCoord),
+                    y : parseFloat(yCoord),
+                    z : parseFloat(zCoord)
             },
             orientation : {
                 x : quaternionpose.x,
@@ -247,15 +249,13 @@ $('#createPoint').click(() => {
             }
         },
         toDo : {
-            waitTime : parseFloat($('#stay-time').val())
+            waitTime : parseFloat(stayTime)
         }
     });
 
     //mintTaskToken($('#task-name').val(), infoStringify);
     /* Start of the block */
     var taskInstance;
-    var name = $('#task-name').val();
-
     console.log("EVENT: Minting token");
     contracts.taskToken.deployed().then(function(instance) {
         taskInstance = instance;
@@ -273,13 +273,13 @@ $('#createPoint').click(() => {
         // Custom message
         var userTask = new ROSLIB.Message({
             id : numberOfTasks.toString(), // To be generated // Get
-            name : $('#task-name').val(),
-            reward : parseFloat($('#reward-value').val()),
+            name : name,
+            reward : parseFloat(reward),
             goalPosition_p : {
                 position : {
-                    x : parseFloat($('#xCoord').val()),
-                    y : parseFloat($('#yCoord').val()),
-                    z : parseFloat($('#zCoord').val())
+                    x : parseFloat(xCoord),
+                    y : parseFloat(yCoord),
+                    z : parseFloat(zCoord)
                 },
                 orientation : {
                     x : quaternionpose.x,
@@ -289,7 +289,7 @@ $('#createPoint').click(() => {
                 }
             },
             toDo : {
-                waitTime : parseFloat($('#stay-time').val())
+                waitTime : parseFloat(stayTime)
             }
         });
         console.log("EVENT: Created custom service message for task: " + userTask.name);     
@@ -316,7 +316,7 @@ $('#createPoint').click(() => {
         // Error function on the minting of the token
         console.log("EVENT: " + err.message);
     });
-});
+};
 
 // Advertising a Service
 // ---------------------
