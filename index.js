@@ -3,6 +3,7 @@ var Web3 = require('web3');
 var THREE = require('three');
 var truffle_contract = require('truffle-contract');
 var ROSLIB = require('roslib');
+//var triggerTask = require('./deployTask.js');
 
 var contracts = {};
 var myToken = null;
@@ -33,7 +34,8 @@ var initWeb3 = function()
 
 var initContract = function(){
   $.getJSON('build/contracts/taskToken.json', function(data) {
-      // Get the necessary contract artifact file and instantiate it with truffle-contract
+      // Get the necessary contract artifact file and instantiate it
+      // with truffle-contract
       var taskArtifact = data;
       contracts.taskToken = TruffleContract(taskArtifact);
 
@@ -116,10 +118,27 @@ var checkTransactionTaskDone = function() {
     }
 };
 
+// Events on buttons clicks
+// ------------------------
+// Every time we click on the create button, we will send a new task
+$('#createPoint').click(() => {
+    auctionNewTask($('#task-name').val(), $('#reward-value').val(),
+                  $('#xCoord').val(), $('#yCoord').val(), $('#zCoord').val(),
+                  $('#orientation').val, $('#stay-time').val()
+    );
+});
+
+// Start the deployment of a set of tasks for testing purposes
+// TODO: add a selector to select the interval between to tasks being deployed
+$('#triggerTest').click(() => {
+    console.log("T_TESTS: Start tests");
+    triggerTest(0);
+});
 
 // Accounts and Tokens display synchronisation
 // -------------------------------------------
-// We will use this function to show the status of our accounts, their balances and amount of tokens
+// We will use this function to show the status of our accounts, 
+// their balances and amount of tokens
 const synchAccounts = () => {
     console.log("SYNC_A: Starting");
     $('#default-account').html(`<b>First Account (computer): ${web3.eth.accounts[0]}</b>`);
@@ -180,7 +199,6 @@ const synchTokensRecursively = (i) => {
     }
 };
 
-
 // Get number of total tasks on the blockchain
 // -------------------------------------------
 const getNumberOfTokenMinted = () => {
@@ -222,16 +240,8 @@ var sendTaskToTrader_srvC = new ROSLIB.Service({
     name : 'taskToTrade',
     serviceType : 'trader/taskToTrade'
 });
-
-// Every time we click on the create button, we will send a new task
-$('#createPoint').click(() => {
-    createNewTask($('#task-name').val(), $('#reward-value').val(),
-                  $('#xCoord').val(), $('#yCoord').val(), $('#zCoord').val(),
-                  $('#orientation').val, $('#stay-time').val()
-    );
-});
     
-const createNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, stayTime) {
+const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, stayTime) {
     // Get the orientation
     var beta = 0; var gamma = 0; var alpha = zOrient;
     var x_radian = ((beta + 360) / 360 * 2 * Math.PI) % (2 * Math.PI);
@@ -449,5 +459,71 @@ markTaskDoneBC.advertise(function(request, response) {
 
 // Init functions
 // --------------
-initWeb3();
-initContract();
+(function() {
+    $(window).on('load', function () {
+        initWeb3();
+        initContract();
+        initArray();
+    });
+})();
+
+/*
+ * This file will trigger a sequence of auctions to test the deplyment of the robots
+ */
+
+Task = function (name, reward, xCoord, yCoord, zCoord, zOrient, stayTime)
+{
+    this.name = name;
+    this.reward = reward;
+    this.xCoord = xCoord;
+    this.yCoord = yCoord;
+    this.zCoord = zCoord;
+    this.zOrient = zOrient;
+    this.staytime = stayTime;
+}
+
+Task.prototype.startTask = function()
+{
+    auctionNewTask(this.name, this.reward, this.xCoord, this.yCoord, this.zCoord, this.zOrient, this.startTime);
+}
+
+arrayTask = {};
+index = 0, nbTest = 0;
+
+initArray = function() {
+    arrayTask[0] = new Task("auto_test_0", 150,  0,  0, 0, 0, 15);
+    arrayTask[1] = new Task("auto_test_1", 150, -1, -1, 0, 0,  9);
+    arrayTask[2] = new Task("auto_test_2", 150,  3,0.5, 0, 0,  5);
+    arrayTask[3] = new Task("auto_test_3", 150,  1,  0, 0, 0, 11);
+    arrayTask[4] = new Task("auto_test_4", 150,  2,0.5, 0, 0, 30);
+    arrayTask[5] = new Task("auto_test_5", 150, -1,  0, 0, 0,  8);
+    arrayTask[6] = new Task("auto_test_6", 150,  0,  1, 0, 0,  4);
+    arrayTask[7] = new Task("auto_test_7", 150,  5,  0, 0, 0,  7);
+    arrayTask[8] = new Task("auto_test_8", 150,  2,  3, 0, 0,  8);
+    arrayTask[9] = new Task("auto_test_9", 150, -5,  1, 0, 0, 15);
+    
+    nbTest = 10;
+};
+
+
+triggerTest = function (index) {
+    if (index == nbTest)
+    {
+        console.log("TESTS: Done!");
+        return true;
+    }
+    else
+    {
+        // A new auction is triggered every 5 sec
+        setTimeout(function() {
+            console.log("Launching task " + index);
+            //arrayTask[index].startTask().then( () => {
+            var task = arrayTask[index];
+            console.log(task);
+            //startTask(task).then( () => {
+            auctionNewTask(task.name, task.reward, task.xCoord, task.yCoord, task.zCoord, task.zOrient, task.startTime).then( () => {
+                triggerTest(index + 1);
+            });
+        }, 5000);
+    }
+};
