@@ -2,6 +2,7 @@ var $ = require('jquery');
 var Web3 = require('web3');
 var THREE = require('three');
 var truffle_contract = require('truffle-contract');
+var ROSLIB = require('roslib');
 
 var contracts = {};
 var myToken = null;
@@ -11,6 +12,8 @@ var web3Provider;
 // Number of deployed token on the network
 var numberOfTasks = 0;
 
+// Initialization of the DApp
+// --------------------------
 var initWeb3 = function()
 {
     if (typeof web3 !== 'undefined')
@@ -28,13 +31,30 @@ var initWeb3 = function()
     web3 = new Web3(web3Provider);
 }
 
-// Connecting to ROS 
-var ROSLIB = require('roslib');
+var initContract = function(){
+  $.getJSON('build/contracts/taskToken.json', function(data) {
+      // Get the necessary contract artifact file and instantiate it with truffle-contract
+      var taskArtifact = data;
+      contracts.taskToken = TruffleContract(taskArtifact);
 
+      // Set the provider for our contract
+      contracts.taskToken.setProvider(web3Provider);
+      console.log("INITC: ABI has been read.");
+      
+      contracts.taskToken.deployed().then(function(instance) {
+         myToken = instance;
+      });
+
+      // Use our contract to get the number of tasks already on the network
+      return getNumberOfTokenMinted();
+  });
+};
+
+// Connecting to ROS
+// -----------------
 var ros = new ROSLIB.Ros({
     url : 'ws://localhost:9090'
 });
-
 
 // If there is an error on the backend, an 'error' emit will be emitted.
 ros.on('error', function(error) {
@@ -65,7 +85,13 @@ ros.on('close', function() {
     document.getElementById('closed').style.display = 'inline';
 });
 
-
+/*
+ * Ugly workaround / quickpatch to check if we received a transaction
+ * request or a task to mark as done.
+ * The purpose of these is to make the service server respond faster
+ * 
+ * IDEA: use actionlib server instead to interact with the bc_handler node?
+ */
 var checkTransaction = function() {
     if (!isTransactionAvailable)
     {
@@ -91,25 +117,8 @@ var checkTransactionTaskDone = function() {
 };
 
 
-var initContract = function(){
-  $.getJSON('build/contracts/taskToken.json', function(data) {
-      // Get the necessary contract artifact file and instantiate it with truffle-contract
-      var taskArtifact = data;
-      contracts.taskToken = TruffleContract(taskArtifact);
-
-      // Set the provider for our contract
-      contracts.taskToken.setProvider(web3Provider);
-      console.log("INITC: ABI has been read.");
-      
-      contracts.taskToken.deployed().then(function(instance) {
-         myToken = instance;
-      });
-
-      // Use our contract to get the number of tasks already on the network
-      return getNumberOfTokenMinted();
-  });
-};
-
+// Accounts and Tokens display synchronisation
+// -------------------------------------------
 // We will use this function to show the status of our accounts, their balances and amount of tokens
 const synchAccounts = () => {
     console.log("SYNC_A: Starting");
@@ -170,7 +179,7 @@ const synchTokensRecursively = (i) => {
         });
     }
 };
-        
+
 
 // Get number of total tasks on the blockchain
 // -------------------------------------------
@@ -206,8 +215,8 @@ const mintTaskToken = (name, info) => {
     });
 };
 
-// Calling a service
-// -----------------
+// Service client to send a task to the local trader node
+// ------------------------------------------------------
 var sendTaskToTrader_srvC = new ROSLIB.Service({
     ros : ros,
     name : 'taskToTrade',
@@ -318,13 +327,13 @@ const createNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, st
     });
 };
 
-// Advertising a Service
-// ---------------------
+// Advertising a Service for task transfer
+// ---------------------------------------
 // traderNode will contact this server to record a transaction on the blockchain
 var idTask = "",
     idBuyer = "",
-    idSeller = ""
-    isTransactionAvailable = false;
+    idSeller = "";
+var isTransactionAvailable = false;
 
 // The Service object does double duty for both calling and advertising services
 var deployTransactionBC = new ROSLIB.Service({
