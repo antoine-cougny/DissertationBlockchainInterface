@@ -137,7 +137,7 @@ const synchAccountsRecursively = (i) => {
                                   `<span class="balance">Tokens ${tokens}</span></p>`);
             return synchAccountsRecursively(i+1);
         }).catch(function(err) {
-            console.log(err.message)
+            console.log("SYNC_A: " + err.message)
         });
     }
 };
@@ -168,7 +168,7 @@ const synchTokensRecursively = (i) => {
             $('#tokens').append(`<p>Id: ${i} | Token Name: ${infoToken[0]} | Token Owner: ${owner} | Task Done: ${infoToken[2]} | Token Info: ${infoToken[1]}</p>`);
             return synchTokensRecursively(i+1);
         }).catch(function(err) {
-            console.log(err.message);
+            console.log("SYNC_T: " + err);
         });
     }
 };
@@ -184,25 +184,25 @@ const getNumberOfTokenMinted = () => {
         console.log("NBTOKEN: Number of task tokens on the blockchain: " + numberOfTasks);
         return synchTokens();
     }).catch(function(err) {
-        console.log(err.message);
+        console.log("NBTOKEN: " + err.message);
     });
-    
-    
 };
 
 // Mint a token on the blockchain
 // ------------------------------
 const mintTaskToken = (name, info) => {
     var taskInstance;
-    console.log("MINT: Mint a new token fct");
-    contracts.taskToken.deployed().then(function(instance, name, info) {
+    console.log("MINT: name: " + name + " info: " + info);
+    contracts.taskToken.deployed().then(function(instance) {
         taskInstance = instance;
         // Mint the token
-        return taskInstance.mint(name, info, {from: web3.eth.accounts[0], gas:300000})
-    }).then(function(instance) {
+        return taskInstance.mint(name, info, {from: web3.eth.accounts[0], gas:30000000})
+    }).then(function() {
         numberOfTasks += 1;
         //console.log(instance);
         console.log("MINT: nb tasks " + numberOfTasks);
+        //synchTokens();
+        //return getNumberOfTokenMinted();
     }).catch(function(err) {
         console.error(err.message);
     });
@@ -252,6 +252,7 @@ $('#createPoint').click(() => {
     });
 
     //mintTaskToken($('#task-name').val(), infoStringify);
+    /* Start of the block */
     var taskInstance;
     var name = $('#task-name').val();
 
@@ -260,10 +261,11 @@ $('#createPoint').click(() => {
         taskInstance = instance;
         // Mint the token
         console.log("MINTING: name: " + name + " info: " + infoStringify);
-        return taskInstance.mint(name, infoStringify, {from: web3.eth.accounts[0], gas: 300000})
+        return taskInstance.mint(name, infoStringify, {from: web3.eth.accounts[0], gas: 30000000})
+        /* End of the block */
     }).then(function(instance) {
         console.log(instance);
-        console.log("EVENT: Id of the new task: " + numberOfTasks);
+        console.log("EVENT: Id of the new task: " + numberOfTasks-1);
 
 
 
@@ -312,7 +314,7 @@ $('#createPoint').click(() => {
         return getNumberOfTokenMinted();
     }).catch(function(err) {
         // Error function on the minting of the token
-        console.log(err.message);
+        console.log("EVENT: " + err.message);
     });
 });
 
@@ -374,7 +376,7 @@ var deployTransaction = function() {
             isTransactionAvailable = false;
             return synchTokens();
         }).catch(function(err) {
-            console.log(err.message);
+            console.log("DT: " + err.message);
         });
     });
 };
@@ -409,7 +411,7 @@ var markTaskDone = function() {
             markTransactionDoneAvailable = false;
             return synchTokens();
         }).catch(function(err) {
-            console.error(err.message);
+            console.error("mTD: " + err.message);
             // TODO find a better implementation not to lose the transaction
             markTransactionDoneAvailable = false;
         });
@@ -440,4 +442,3 @@ markTaskDoneBC.advertise(function(request, response) {
 // --------------
 initWeb3();
 initContract();
-
