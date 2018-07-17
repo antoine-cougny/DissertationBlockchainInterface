@@ -273,7 +273,7 @@ const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, s
     });
 
     //mintTaskToken($('#task-name').val(), infoStringify);
-    /* Start of the block */
+    /* Start of the block of code, could not use fct here. Because of promises? */
     var taskInstance;
     console.log("EVENT: Minting token");
     contracts.taskToken.deployed().then(function(instance) {
@@ -284,14 +284,14 @@ const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, s
         /* End of the block */
     }).then(function(instance) {
         console.log(instance);
-        console.log("EVENT: Id of the new task: " + numberOfTasks-1);
+        console.log("EVENT: Id of the new task: " + (parseInt(numberOfTasks)-1).toString());
 
 
 
 
         // Custom message
         var userTask = new ROSLIB.Message({
-            id : numberOfTasks.toString(), // To be generated // Get
+            id : numberOfTasks.toString(),
             name : name,
             reward : parseFloat(reward),
             goalPosition_p : {
@@ -467,24 +467,26 @@ markTaskDoneBC.advertise(function(request, response) {
     });
 })();
 
+// ************************************************************************* //
 /*
- * This file will trigger a sequence of auctions to test the deplyment of the robots
+ * This file will trigger a sequence of auctions to test the deployment of
+ * the robots
  */
 
 Task = function (name, reward, xCoord, yCoord, zCoord, zOrient, stayTime)
 {
     this.name = name;
-    this.reward = reward;
-    this.xCoord = xCoord;
-    this.yCoord = yCoord;
-    this.zCoord = zCoord;
-    this.zOrient = zOrient;
-    this.staytime = stayTime;
+    this.reward = parseFloat(reward);
+    this.xCoord = parseFloat(xCoord);
+    this.yCoord = parseFloat(yCoord);
+    this.zCoord = parseFloat(zCoord);
+    this.zOrient = parseFloat(zOrient);
+    this.stayTime = parseFloat(stayTime);
 }
 
 Task.prototype.startTask = function()
 {
-    auctionNewTask(this.name, this.reward, this.xCoord, this.yCoord, this.zCoord, this.zOrient, this.startTime);
+    auctionNewTask(this.name, this.reward, this.xCoord, this.yCoord, this.zCoord, this.zOrient, this.stayTime);
 }
 
 arrayTask = {};
