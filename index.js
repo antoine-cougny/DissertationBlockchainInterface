@@ -48,7 +48,11 @@ var initContract = function(){
       });
 
       // Use our contract to get the number of tasks already on the network
-      return getNumberOfTokenMinted();
+      return new Promise((resolve, reject) => {
+          return getNumberOfTokenMinted(resolve, reject);
+      }).then( (msg) => {
+          console.log("\n\n\tINIT: READY\n\n\n");
+      });
   });
 };
 
@@ -125,7 +129,9 @@ $('#createPoint').click(() => {
     auctionNewTask($('#task-name').val(), $('#reward-value').val(),
                   $('#xCoord').val(), $('#yCoord').val(), $('#zCoord').val(),
                   $('#orientation').val, $('#stay-time').val()
-    );
+    ).then(() => {
+        console.log("\nTOKEN MINTED, auction started\n\n\n");
+    });
 });
 
 // Start the deployment of a set of tasks for testing purposes
@@ -139,18 +145,19 @@ $('#triggerTest').click(() => {
 // -------------------------------------------
 // We will use this function to show the status of our accounts, 
 // their balances and amount of tokens
-const synchAccounts = () => {
+const synchAccounts = (resolve, reject) => {
     console.log("SYNC_A: Starting");
     $('#default-account').html(`<b>First Account (computer): ${web3.eth.accounts[0]}</b>`);
     $('#accounts').html("");
-    synchAccountsRecursively(0);
+
+    return synchAccountsRecursively(0, resolve, reject);
 };
 
-const synchAccountsRecursively = (i) => {
+const synchAccountsRecursively = (i, resolve, reject) => {
     if (i == web3.eth.accounts.length)
     {
         console.log("SYNC_A: Done");
-        return
+        resolve("fulfilled!");
     }
     else
     {
@@ -161,7 +168,7 @@ const synchAccountsRecursively = (i) => {
                                   `<span class="address">${account}</span> | `+
                                   `<span class="balance">ETH ${balance}</span> | `+
                                   `<span class="balance">Tokens ${tokens}</span></p>`);
-            return synchAccountsRecursively(i+1);
+            return synchAccountsRecursively(i+1, resolve, reject);
         }).catch(function(err) {
             console.log("SYNC_A: " + err.message)
         });
@@ -169,19 +176,19 @@ const synchAccountsRecursively = (i) => {
 };
 
 // Same with the different tokens
-const synchTokens = () => {
+const synchTokens = (resolve, reject) => {
     console.log("SYNC_T: Starting");
     $('#number-tokens').html("");
     $('#number-tokens').append(`<p>Number of tasks deployed: ${numberOfTasks}</p>`);
     $('#tokens').html("");
-    synchTokensRecursively(0);
+    return synchTokensRecursively(0, resolve, reject);
 };
 
-const synchTokensRecursively = (i) => {
+const synchTokensRecursively = (i, resolve, reject) => {
     if (i == numberOfTasks)
     {
-        console.log("SYNC_T: Done");
-        return synchAccounts();
+        console.log("SYNC_Tr: Done");
+        return synchAccounts(resolve, reject);
     }
     else
     {
@@ -189,25 +196,25 @@ const synchTokensRecursively = (i) => {
         var infoToken;
         deployedToken = myToken.getTask.call(i).then(info => {
             infoToken = info;
-            return myToken.ownerOf.call(i)
+            return myToken.ownerOf.call(i);
         }).then(owner => {
             $('#tokens').append(`<p>Id: ${i} | Token Name: ${infoToken[0]} | Token Owner: ${owner} | Task Done: ${infoToken[2]} | Token Info: ${infoToken[1]}</p>`);
-            return synchTokensRecursively(i+1);
+            return synchTokensRecursively(i+1, resolve, reject);
         }).catch(function(err) {
-            console.log("SYNC_T: " + err);
+            console.log("SYNC_Tr: " + err);
         });
     }
 };
 
 // Get number of total tasks on the blockchain
 // -------------------------------------------
-const getNumberOfTokenMinted = () => {
+const getNumberOfTokenMinted = (resolve, reject) => {
     contracts.taskToken.deployed().then(function(instance) {
         return instance.totalSupply.call();
     }).then(function(e) {
         numberOfTasks = e.toNumber();
         console.log("NBTOKEN: Number of task tokens on the blockchain: " + numberOfTasks);
-        return synchTokens();
+        return synchTokens(resolve, reject);
     }).catch(function(err) {
         console.log("NBTOKEN: " + err.message);
     });
@@ -276,64 +283,75 @@ const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, s
     /* Start of the block of code, could not use fct here. Because of promises? */
     var taskInstance;
     console.log("EVENT: Minting token");
-    contracts.taskToken.deployed().then(function(instance) {
-        taskInstance = instance;
-        // Mint the token
-        console.log("MINTING: name: " + name + " info: " + infoStringify);
-        return taskInstance.mint(name, infoStringify, {from: web3.eth.accounts[0], gas: 30000000})
-        /* End of the block */
-    }).then(function(instance) {
-        console.log(instance);
-        console.log("EVENT: Id of the new task: " + (parseInt(numberOfTasks)-1).toString());
+    
+    return new Promise((resolve, reject) => {
+        contracts.taskToken.deployed().then(function(instance) {
+            taskInstance = instance;
+            // Mint the token
+            console.log("MINTING: name: " + name + " info: " + infoStringify);
+            return taskInstance.mint(name, infoStringify, {from: web3.eth.accounts[0], gas: 30000000})
+            /* End of the block */
+        }).then(function(instance) {
+            console.log(instance);
+            console.log("EVENT: Id of the new task: " + (parseInt(numberOfTasks)-1).toString());
 
 
 
 
-        // Custom message
-        var userTask = new ROSLIB.Message({
-            id : numberOfTasks.toString(),
-            name : name,
-            reward : parseFloat(reward),
-            goalPosition_p : {
-                position : {
-                    x : parseFloat(xCoord),
-                    y : parseFloat(yCoord),
-                    z : parseFloat(zCoord)
+            // Custom message
+            var userTask = new ROSLIB.Message({
+                id : numberOfTasks.toString(),
+                name : name,
+                reward : parseFloat(reward),
+                goalPosition_p : {
+                    position : {
+                        x : parseFloat(xCoord),
+                        y : parseFloat(yCoord),
+                        z : parseFloat(zCoord)
+                    },
+                    orientation : {
+                        x : quaternionpose.x,
+                        y : quaternionpose.y,
+                        z : quaternionpose.z,
+                        w : quaternionpose.w
+                    }
                 },
-                orientation : {
-                    x : quaternionpose.x,
-                    y : quaternionpose.y,
-                    z : quaternionpose.z,
-                    w : quaternionpose.w
+                toDo : {
+                    waitTime : parseFloat(stayTime)
                 }
-            },
-            toDo : {
-                waitTime : parseFloat(stayTime)
-            }
+            });
+            console.log("EVENT: Created custom service message for task: " + userTask.name);     
+            
+            // Create a service request
+            var request = new ROSLIB.ServiceRequest({
+                task: userTask
+            });
+
+            // Call the service
+            sendTaskToTrader_srvC.callService(request, function(result) {
+                if (result)
+                {
+                    console.log('EVENT: Result for service call on '
+                    + sendTaskToTrader_srvC.name
+                    + ': '
+                    + result.auctionReady);
+                }
+                else
+                {
+                    console.error("Could not contact ros trader nodes");
+                }
+            });
+
+
+
+            // Update the total number of token locally
+            //numberOfTasks += 1;
+            return getNumberOfTokenMinted(resolve, reject);
+
+        }).catch(function(err) {
+            // Error function on the minting of the token
+            console.log("EVENT: " + err.message);
         });
-        console.log("EVENT: Created custom service message for task: " + userTask.name);     
-        
-        // Create a service request
-        var request = new ROSLIB.ServiceRequest({
-            task: userTask
-        });
-
-        // Call the service
-        sendTaskToTrader_srvC.callService(request, function(result) {
-            console.log('EVENT: Result for service call on '
-              + sendTaskToTrader_srvC.name
-              + ': '
-              + result.auctionReady);
-        });
-
-
-
-        // Update the total number of token locally
-        //numberOfTasks += 1;
-        return getNumberOfTokenMinted();
-    }).catch(function(err) {
-        // Error function on the minting of the token
-        console.log("EVENT: " + err.message);
     });
 };
 
@@ -516,16 +534,25 @@ triggerTest = function (index) {
     }
     else
     {
+        //arrayTask[index].startTask().then( () => {
+        var task = arrayTask[index];
+        //console.log("TESTS: Task to be sent:");
+        //console.log(task);
+        //startTask(task).then( () => {
+        
         // A new auction is triggered every 5 sec
         setTimeout(function() {
-            console.log("Launching task " + index);
-            //arrayTask[index].startTask().then( () => {
-            var task = arrayTask[index];
-            console.log(task);
-            //startTask(task).then( () => {
-            auctionNewTask(task.name, task.reward, task.xCoord, task.yCoord, task.zCoord, task.zOrient, task.startTime).then( () => {
-                triggerTest(index + 1);
+            console.log("TESTS: Launching task " + index);
+            auctionNewTask(task.name, task.reward,
+                           task.xCoord, task.yCoord, task.zCoord,
+                           task.zOrient, task.stayTime
+            ).then( (t) => {
+                console.log("TESTS: " + index + " " + t);
+                return triggerTest(index + 1);
+            }).catch( (err) => {
+                console.log(err.message);
             });
         }, 5000);
     }
 };
+// ************************************************************************* //
