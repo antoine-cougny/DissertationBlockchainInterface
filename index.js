@@ -78,10 +78,6 @@ ros.on('connection', function() {
     document.getElementById('error').style.display = 'none';
     document.getElementById('closed').style.display = 'none';
     document.getElementById('connected').style.display = 'inline';
-    // Monitor incomming transaction every second
-    // Ugly solution
-    checkTransaction();
-    checkTransactionTaskDone();
 });
 
 ros.on('close', function() {
@@ -90,37 +86,6 @@ ros.on('close', function() {
     document.getElementById('connected').style.display = 'none';
     document.getElementById('closed').style.display = 'inline';
 });
-
-/*
- * Ugly workaround / quickpatch to check if we received a transaction
- * request or a task to mark as done.
- * The purpose of these is to make the service server respond faster
- * 
- * IDEA: use actionlib server instead to interact with the bc_handler node?
- */
-var checkTransaction = function() {
-    if (!isTransactionAvailable)
-    {
-        setTimeout(checkTransaction, 1000);
-        return;
-    }
-    else
-    {
-        deployTransaction();
-    }
-};
-
-var checkTransactionTaskDone = function() {
-    if (!markTransactionDoneAvailable)
-    {
-        setTimeout(checkTransactionTaskDone, 1000);
-        return;
-    }
-    else
-    {
-        markTaskDone();
-    }
-};
 
 // Events on buttons clicks
 // ------------------------
@@ -375,7 +340,7 @@ deployTransactionBC.advertise(function(request, response) {
     console.log('nT: Received service request on ' + deployTransactionBC.name 
                 + ': \n' + request.idTask + " : " + request.idSeller 
                 + " => " + request.idBuyer);
-    if (!isTransactionAvailable)
+    if (!isTransactionAvailable && !markTransactionDoneAvailable)
     {
         console.log("nT: We accept to process the incomming transaction");
         response['status'] = true;
@@ -390,6 +355,7 @@ deployTransactionBC.advertise(function(request, response) {
                     + "we declined the incomming transaction");
         response['status'] = false;
     }
+    deployTransaction();
     return true;
 });
 
@@ -399,22 +365,19 @@ var deployTransaction = function() {
     console.log("DT: Transfer transaction");
 
     var taskInstance;
-    web3.eth.getAccounts(function(error, accounts) {
-        if (error) {
-            console.log(error);
-        }
-        contracts.taskToken.deployed().then(function(instance) {
-            taskInstance = instance;
-            // Transfer task
-            console.log("DT: Transfer initiated");
-            return taskInstance.transferFrom(idSeller, idBuyer, idTask, {from: web3.eth.accounts[0], gas: 30000000});
-        }).then(function(instance) {
-            console.log("DT: Ready for a new transaction");
-            isTransactionAvailable = false;
-            return synchTokens();
-        }).catch(function(err) {
-            console.log("DT: " + err.message);
+    contracts.taskToken.deployed().then(function(instance) {
+        taskInstance = instance;
+        // Transfer task
+        console.log("DT: Transfer initiated");
+        return taskInstance.transferFrom(idSeller, idBuyer, idTask, {from: web3.eth.accounts[0], gas: 30000000});
+    }).then(function(instance) {
+        console.log("DT: Ready for a new transaction");
+        isTransactionAvailable = false;
+        return new Promise((resolve, reject) => {
+            return synchTokens(resolve, reject);
         });
+    }).catch(function(err) {
+        console.log("DT: " + err.message);
     });
 };
 
@@ -435,30 +398,28 @@ var markTaskDone = function() {
     console.log("mTD: setting Done flag transaction");
 
     var taskInstance;
-    web3.eth.getAccounts(function(error, accounts) {
-        if (error) {
-            console.log(error);
-        }
-        contracts.taskToken.deployed().then(function(instance) {
-            taskInstance = instance;
-            // Transfer task
-            return taskInstance.setTaskDone(idTaskDone, {from: web3.eth.accounts[0], gas: 30000000});//{from: idTaskOwner, gas: 30000000});
-        }).then(function(instance) {
-            console.log("mTD: Task " + idTaskDone + " has been set as done");
-            markTransactionDoneAvailable = false;
-            return synchTokens();
-        }).catch(function(err) {
-            console.error("mTD: " + err.message);
-            // TODO find a better implementation not to lose the transaction
-            markTransactionDoneAvailable = false;
+    contracts.taskToken.deployed().then(function(instance) {
+        taskInstance = instance;
+        // Transfer task
+        console.log("mTD: initiated");
+        return taskInstance.setTaskDone(idTaskDone, {from: web3.eth.accounts[0], gas: 30000000});//{from: idTaskOwner, gas: 30000000});
+    }).then(function(instance) {
+        console.log("mTD: Task " + idTaskDone + " has been set as done");
+        markTransactionDoneAvailable = false;
+        return new Promise((resolve, reject) => {
+            return synchTokens(resolve, reject);
         });
+    }).catch(function(err) {
+        console.error("mTD: " + err.message);
+        // TODO find a better implementation not to lose the transaction
+        markTransactionDoneAvailable = false;
     });
 };
 
 markTaskDoneBC.advertise(function(request, response) {
     console.log('mTD: Received service request. Robot ' + request.idSeller
                 + ' has finished task ' + request.idTask);
-    if (!markTransactionDoneAvailable)
+    if (!markTransactionDoneAvailable && !isTransactionAvailable)
     {
         console.log("mTD: We accept to process the incomming transaction");
         response['status'] = true;
@@ -472,6 +433,7 @@ markTaskDoneBC.advertise(function(request, response) {
                     + "we declined the incomming transaction");
         response['status'] = false;
     }
+    markTaskDone();
     return true;
 });
 
@@ -552,7 +514,7 @@ triggerTest = function (index) {
             }).catch( (err) => {
                 console.log(err.message);
             });
-        }, 5000);
+        }, 20*1000);
     }
 };
 // ************************************************************************* //
