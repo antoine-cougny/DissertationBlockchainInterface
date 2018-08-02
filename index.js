@@ -13,7 +13,7 @@ var web3Provider;
 // Number of deployed token on the network
 var numberOfTasks = 0;
 // Measure ellapsed time
-var t0, t1, t2, t3, t4;
+var t0, t1, t2, t3, t4, t2b;
 var t1b_arr = {};
 var i = 0; // counter
 
@@ -46,7 +46,7 @@ var initContract = function(){
       // Set the provider for our contract
       contracts.taskToken.setProvider(web3Provider);
       console.log("INITC: ABI has been read.");
-      
+
       contracts.taskToken.deployed().then(function(instance) {
          myToken = instance;
       });
@@ -99,7 +99,7 @@ $('#createPoint').click(() => {
                   $('#xCoord').val(), $('#yCoord').val(), $('#zCoord').val(),
                   $('#orientation').val, $('#stay-time').val()
     ).then(() => {
-        console.log("\nTOKEN MINTED, auction started\n\n\n");
+        console.log("\n\tTOKEN MINTED, auction started\n\n\n");
     });
 });
 
@@ -303,6 +303,8 @@ const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, s
 
             // Call the service
             t1 = getTS_msec();
+            console.warn("minting:", t1-t0);// t1 is auction opening
+
             sendTaskToTrader_srvC.callService(request, function(result) {
                 if (result)
                 {
@@ -393,7 +395,8 @@ var deployTransaction = function() {
     }).catch(function(err) {
         console.log("DT: " + err.message);
     }).then(() => {
-        console.log("\n\n\tDeploy Task Done\n\n")
+        console.log("\n\n\tTransfer Task Done\n\n")
+        t2b = getTS_msec();
     });
 };
 
@@ -425,12 +428,12 @@ var markTaskDone = function() {
         markTransactionDoneAvailable = false;
 
         t4 = getTS_msec();
-        console.warn("minting:", t1-t0,
-                     "auction (+5s overhead) (ms):", t2-t1,
+        console.warn("minting:", t1-t0, // t1 is auction opening
+                     "auction (+5s overhead) (ms):", t2-t1, // t2 is before transaction transfer
                      "refresh ", t2-t1b_arr[0],
-                     "perform task t1 (+10s of task):", t3-t1,
-                     "perform task t2 (+10s of task):", t3-t2,
-                     "markTaskDone:", t4-t3,
+                     "transfer task t:", t2b-t2, // t2b is in transfer token callback
+                     "perform task t1 (+10s of task):", t3-t1, // t3 is before transfer mTD on BC
+                     "markTaskDone:", t4-t3, // t4 is in mTD callback
                      "total task:", t4-t1
                     );
 
@@ -507,17 +510,17 @@ arrayTask = {};
 index = 0, nbTest = 0;
 
 initArray = function() {
-    arrayTask[0] = new Task("auto_test_0", 150,  0,  0, 0, 0, 15);
-    arrayTask[1] = new Task("auto_test_1", 150, -1, -1, 0, 0,  9);
-    arrayTask[2] = new Task("auto_test_2", 150,  3,0.5, 0, 0,  5);
-    arrayTask[3] = new Task("auto_test_3", 150,  1,  0, 0, 0, 11);
-    arrayTask[4] = new Task("auto_test_4", 150,  2,0.5, 0, 0, 30);
-    arrayTask[5] = new Task("auto_test_5", 150, -1,  0, 0, 0,  8);
-    arrayTask[6] = new Task("auto_test_6", 150,  0,  1, 0, 0,  4);
-    arrayTask[7] = new Task("auto_test_7", 150,  5,  0, 0, 0,  7);
-    arrayTask[8] = new Task("auto_test_8", 150,  2,  3, 0, 0,  8);
-    arrayTask[9] = new Task("auto_test_9", 150, -5,  1, 0, 0, 15);
-    
+    arrayTask[0] = new Task("auto_test_0", 150,  0,  0, 0, 0, 10);
+    arrayTask[1] = new Task("auto_test_1", 150,  3,0.5, 0, 0, 20);
+    arrayTask[2] = new Task("auto_test_2", 150,  3, -3, 0, 0, 30);
+    arrayTask[3] = new Task("auto_test_3", 150, -3,  2, 0, 0, 40);
+    arrayTask[4] = new Task("auto_test_4", 150, -4, -4, 0, 0, 30);
+    arrayTask[5] = new Task("auto_test_5", 150,  1, -5, 0, 0, 20);
+    arrayTask[6] = new Task("auto_test_6", 150,  4,  4, 0, 0, 10);
+    arrayTask[7] = new Task("auto_test_7", 150, -1, -1, 0, 0, 20);
+    arrayTask[8] = new Task("auto_test_8", 150,  2,  3, 0, 0, 30);
+    arrayTask[9] = new Task("auto_test_9", 150, -5,  1, 0, 0, 10);
+
     nbTest = 10;
 };
 
@@ -535,7 +538,7 @@ triggerTest = function (index) {
         //console.log("TESTS: Task to be sent:");
         //console.log(task);
         //startTask(task).then( () => {
-        
+
         // A new auction is triggered every 5 sec
         setTimeout(function() {
             console.log("TESTS: Launching task " + index);
@@ -548,7 +551,7 @@ triggerTest = function (index) {
             }).catch( (err) => {
                 console.log(err.message);
             });
-        }, 20*1000);
+        }, 2*1000);
     }
 };
 // ************************************************************************* //
