@@ -12,6 +12,10 @@ const nullAddress = "0x0000000000000000000000000000000000000000";
 var web3Provider;
 // Number of deployed token on the network
 var numberOfTasks = 0;
+// Measure ellapsed time
+var t0, t1, t2, t3, t4;
+var t1b_arr = {};
+var i = 0; // counter
 
 // Initialization of the DApp
 // --------------------------
@@ -122,6 +126,8 @@ const synchAccountsRecursively = (i, resolve, reject) => {
     if (i == web3.eth.accounts.length)
     {
         console.log("SYNC_A: Done");
+        t1b_arr[i] = getTS_msec();
+        i += 1;
         resolve("fulfilled!");
     }
     else
@@ -212,7 +218,7 @@ var sendTaskToTrader_srvC = new ROSLIB.Service({
     name : 'taskToTrade',
     serviceType : 'trader/taskToTrade'
 });
-    
+
 const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, stayTime) {
     // Get the orientation
     var beta = 0; var gamma = 0; var alpha = zOrient;
@@ -248,7 +254,10 @@ const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, s
     /* Start of the block of code, could not use fct here. Because of promises? */
     var taskInstance;
     console.log("EVENT: Minting token");
-    
+
+    i = 0;
+    t0 = getTS_msec();
+
     return new Promise((resolve, reject) => {
         contracts.taskToken.deployed().then(function(instance) {
             taskInstance = instance;
@@ -286,13 +295,14 @@ const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, s
                 }
             });
             console.log("EVENT: Created custom service message for task: " + userTask.name);     
-            
+
             // Create a service request
             var request = new ROSLIB.ServiceRequest({
                 task: userTask
             });
 
             // Call the service
+            t1 = getTS_msec();
             sendTaskToTrader_srvC.callService(request, function(result) {
                 if (result)
                 {
@@ -300,6 +310,9 @@ const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, s
                     + sendTaskToTrader_srvC.name
                     + ': '
                     + result.auctionReady);
+                    if (result.auctionReady === true)
+                    {
+                    }
                 }
                 else
                 {
@@ -348,6 +361,7 @@ deployTransactionBC.advertise(function(request, response) {
         idBuyer = request.idBuyer;
         idSeller = request.idSeller;
         isTransactionAvailable = true;
+        deployTransaction();
     }
     else
     {
@@ -355,7 +369,6 @@ deployTransactionBC.advertise(function(request, response) {
                     + "we declined the incomming transaction");
         response['status'] = false;
     }
-    deployTransaction();
     return true;
 });
 
@@ -364,6 +377,7 @@ var deployTransaction = function() {
     // TODO: use parameter in function instead of global var
     console.log("DT: Transfer transaction");
 
+    t2 = getTS_msec();
     var taskInstance;
     contracts.taskToken.deployed().then(function(instance) {
         taskInstance = instance;
@@ -378,6 +392,8 @@ var deployTransaction = function() {
         });
     }).catch(function(err) {
         console.log("DT: " + err.message);
+    }).then(() => {
+        console.log("\n\n\tDeploy Task Done\n\n")
     });
 };
 
@@ -397,6 +413,7 @@ var markTaskDone = function() {
     // TODO: use parameter in function instead of global var
     console.log("mTD: setting Done flag transaction");
 
+    t3 = getTS_msec();
     var taskInstance;
     contracts.taskToken.deployed().then(function(instance) {
         taskInstance = instance;
@@ -406,6 +423,17 @@ var markTaskDone = function() {
     }).then(function(instance) {
         console.log("mTD: Task " + idTaskDone + " has been set as done");
         markTransactionDoneAvailable = false;
+
+        t4 = getTS_msec();
+        console.warn("minting:", t1-t0,
+                     "auction (+5s overhead) (ms):", t2-t1,
+                     "refresh ", t2-t1b_arr[0],
+                     "perform task t1 (+10s of task):", t3-t1,
+                     "perform task t2 (+10s of task):", t3-t2,
+                     "markTaskDone:", t4-t3,
+                     "total task:", t4-t1
+                    );
+
         return new Promise((resolve, reject) => {
             return synchTokens(resolve, reject);
         });
@@ -413,6 +441,8 @@ var markTaskDone = function() {
         console.error("mTD: " + err.message);
         // TODO find a better implementation not to lose the transaction
         markTransactionDoneAvailable = false;
+    }).then(() => {
+        console.log("\n\n\tMarkTask Done\n\n")
     });
 };
 
@@ -426,6 +456,7 @@ markTaskDoneBC.advertise(function(request, response) {
         idTaskDone = request.idTask;
         idTaskOwner = request.idSeller;
         markTransactionDoneAvailable = true;
+        markTaskDone();
     }
     else
     {
@@ -433,7 +464,6 @@ markTaskDoneBC.advertise(function(request, response) {
                     + "we declined the incomming transaction");
         response['status'] = false;
     }
-    markTaskDone();
     return true;
 });
 
@@ -446,6 +476,10 @@ markTaskDoneBC.advertise(function(request, response) {
         initArray();
     });
 })();
+
+// Get timestqmp in sec or msec
+const getTS_sec = function() { return Math.round((new Date()).getTime() / 1000); }
+const getTS_msec = function() { return Math.round((new Date()).getTime()); }
 
 // ************************************************************************* //
 /*
