@@ -219,6 +219,17 @@ var sendTaskToTrader_srvC = new ROSLIB.Service({
     serviceType : 'trader/taskToTrade'
 });
 
+// Update: use a publisher and send to decisionNode to avoid loosing taskToken
+// if tasks are input too fast
+// -------
+/*var sendTaskToTrader_pub = new ROSLIB.Topic({
+    ros : ros,
+    name : 'newTask',
+    serviceType : 'trader/taskToTrade'
+});
+sendTaskToTrader_pub.advertise();
+*/
+
 const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, stayTime) {
     // Get the orientation
     var beta = 0; var gamma = 0; var alpha = zOrient;
@@ -290,6 +301,7 @@ const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, s
                         w : quaternionpose.w
                     }
                 },
+                nbTimesBeenAccepted : 0,
                 toDo : {
                     waitTime : parseFloat(stayTime)
                 }
@@ -305,6 +317,7 @@ const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, s
             t1 = getTS_msec();
             console.warn("minting:", t1-t0);// t1 is auction opening
 
+            //sendTaskToTrader_pub.publish(userTask);
             sendTaskToTrader_srvC.callService(request, function(result) {
                 if (result)
                 {
@@ -551,7 +564,7 @@ triggerTest = function (index) {
             }).catch( (err) => {
                 console.log(err.message);
             });
-        }, 2*1000);
+        }, 10*1000);
     }
 };
 // ************************************************************************* //
