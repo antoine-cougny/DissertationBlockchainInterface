@@ -278,7 +278,7 @@ const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, s
             /* End of the block */
         }).then(function(instance) {
             console.log(instance);
-            console.log("EVENT: Id of the new task: " + (parseInt(numberOfTasks)-1).toString());
+            console.log("EVENT: Id of the new task: " + (parseInt(numberOfTasks)).toString());
 
 
 
@@ -306,7 +306,7 @@ const auctionNewTask = function(name, reward, xCoord, yCoord, zCoord, zOrient, s
                     waitTime : parseFloat(stayTime)
                 }
             });
-            console.log("EVENT: Created custom service message for task: " + userTask.name);     
+            console.log("EVENT: Created custom service message for task: " + userTask.name);
 
             // Create a service request
             var request = new ROSLIB.ServiceRequest({
