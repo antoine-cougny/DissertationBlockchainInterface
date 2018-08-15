@@ -1,12 +1,5 @@
 # Ethereum Client for MSc Dissertation Project
 
-TODO / Needed
-- geth (eth client)
-- truffle
-- openzeppelin
-- web3js
-- roslibjs
-- ipfs ?
 
 intall nodejs, npm, geth, truffle_contract
 
@@ -20,6 +13,7 @@ https://hackernoon.com/how-to-reduce-block-difficulty-in-ethereum-private-testne
 clone repo and install npm dependencies
 
 ```sh
+npm install
 ```
 
 
