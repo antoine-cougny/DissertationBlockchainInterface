@@ -65,7 +65,15 @@ If you edit the index.js file, don't forget to recompile:
 npx watchify index.js -o bundle.js -v
 ```
 
+Open the JS console of your web browser to read the logs (F12)
+
 ## Add A Wallet for a Robot
 [This Tutorial](http://chainskills.com/2017/03/10/part-3-setup-the-private-chain-miners/)
 
 Keep the address of the wallet and edit the launchfile of the robots.
+
+## TODO
+
+- fix transaction signature
+- smart-contract testings with truffle development tools
+- update code, decrease its size and split it
