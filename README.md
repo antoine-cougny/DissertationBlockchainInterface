@@ -77,3 +77,4 @@ Keep the address of the wallet and edit the launchfile of the robots.
 - fix transaction signature
 - smart-contract testings with truffle development tools
 - update code, decrease its size and split it
+- check and remove useless node modules
