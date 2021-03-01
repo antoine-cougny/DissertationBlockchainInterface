@@ -31,7 +31,7 @@
     "openzeppelin-solidity": "^1.10.0",
     "roslib": "^0.20.0",
     "roslibjs-client": "^0.2.1",
-    "three": "^0.94.0",
+    "three": "^0.125.0",
     "truffle": "^4.1.13",
     "truffle-contract": "^3.0.6",
     "web3": "^0.20.6"
