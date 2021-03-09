@@ -30,10 +30,10 @@
     "lite-server": "^2.4.0",
     "npm-check-updates": "^11.2.0",
     "openzeppelin-solidity": "^1.10.0",
-    "roslib": "^0.20.0",
+    "roslib": "^0.18.0",
     "roslibjs-client": "^0.2.1",
-    "three": "^0.94.0",
-    "truffle": "^4.1.13",
+    "three": "^0.126.1",
+    "truffle": "^5.2.3",
     "truffle-contract": "^3.0.6",
     "web3": "^0.20.6"
   }
