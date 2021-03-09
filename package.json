@@ -28,6 +28,7 @@
   "dependencies": {
     "ganache-cli": "^6.1.5",
     "lite-server": "^2.4.0",
+    "npm-check-updates": "^11.2.0",
     "openzeppelin-solidity": "^1.10.0",
     "roslib": "^0.20.0",
     "roslibjs-client": "^0.2.1",
